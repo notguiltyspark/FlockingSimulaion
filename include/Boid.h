@@ -5,6 +5,10 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include "Vector2_ext.h"
+#include "BoidParameters.h"
+#include <memory>
+
+
 
 class Boid {
 private:
@@ -15,15 +19,8 @@ private:
 	sf::Vector2f velocity;
 	sf::Vector2f acceleration;
 
-	float maxSpeed;
-	float maxForce;
-	float desiredSeparation = 10; //constexpr or input?
-	float visionRadius = 15;
+	BoidParameters boid_params;
 	
-	float alignCoef = 0.9;
-	float coheseCoef = 0.4;
-	float separateCoef = 0.9;
-
 public:
 
 	Boid() {}
@@ -38,33 +35,41 @@ public:
 		velocity = sf::Vector2f(randint(4)*sign, randint(4)* sign);
 		acceleration = sf::Vector2f(0, 0);
 
-		maxSpeed = 2.8;
-		maxForce = 0.09;
+		boid_params.maxSpeed = 2.8;
+		boid_params.maxForce = 0.09;
 
 		shape.setRadius(4);
 		shape.setFillColor(sf::Color::Black);
 	}
-	~Boid() {};
+	
+   ~Boid() {};
 
 	void update(const sf::RenderWindow& window);
 	void checkEdges (const sf::RenderWindow& window);
 	void ignoreEdges(const sf::RenderWindow& window);
 	
 	void seek(sf::Vector2f& target);
-	void separate(const std::vector<Boid>& v_vec);
-	void align   (const std::vector<Boid>& v_vec);
-	void cohese  (const std::vector<Boid>& v_vec);
 	void swarm   (const std::vector<Boid>& v_vec);
-
+	
 	void applyForce(sf::Vector2f& force) { acceleration += force; }
 
-	int           getRadius()   const { return shape.getRadius(); }
-	sf::Vector2f  getLocation() const { return location; }
-	sf::Vector2f  getVelocity() const { return velocity; }
+	int            getRadius()     const { return shape.getRadius(); }
+	sf::Vector2f   getLocation()   const { return location; }
+	sf::Vector2f   getVelocity()   const { return velocity; }
+	BoidParameters getBoidParams() const { return boid_params; }
 
-	void limit(float f) { if (mag(acceleration) > maxForce) acceleration = norm(acceleration) * maxForce; };
+	void limit(float f) { if (mag(acceleration) > boid_params.maxForce) acceleration = norm(acceleration) * boid_params.maxForce; };
 	void draw(sf::RenderWindow& window);
 
+
+	//Boid(Boid&&);
+	//Boid(const Boid&);
+
 };
+
+void parallel_swarm(const std::vector<Boid*>& v_vec,
+	const std::vector<Boid*>::iterator& start,
+	const std::vector<Boid*>::iterator& end);
+
 
 #endif
