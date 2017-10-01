@@ -10,6 +10,8 @@ The idea is for every boid to traverse the "pack" and update its position accord
    - cohese
    - separate
   
-By implementing all behaviour rules in single run, using method *swarm*, constant factor in algorithm complexity may be reduced by three times
+By implementing all behaviour rules in single run, using method *swarm*, constant factor in algorithm complexity may be reduced by three times.
 
-For further performance improvement, multithreading implementation is considered as **std::vector**'s read-thread-safety allows to split the pack on thread-groups
+For further performance improvement, multithreading implementation is considered as **std::vector**'s read-thread-safety allows to split the pack on thread-groups.
+
+![Snapshot](https://user-images.githubusercontent.com/31808526/31057999-f86d24a0-a6f4-11e7-9277-62b95948a394.png)
