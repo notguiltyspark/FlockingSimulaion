@@ -1,5 +1,5 @@
 # FlockingSimulaion
-Flocking simulation based on Daniel Shiffman's implementation in "The Nature of Code"
+Flocking simulation based on Daniel Shiffman's implementation in ["The Nature of Code"](http://natureofcode.com/book/)
 
 ##### External Libraries
    - SFML
