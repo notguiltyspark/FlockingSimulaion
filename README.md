@@ -2,7 +2,7 @@
 Flocking simulation based on Daniel Shiffman's implementation in ["The Nature of Code"](http://natureofcode.com/book/)
 
 ##### External Libraries
-   - SFML
+   - [SFML](https://www.sfml-dev.org/)
 
 ##### Project Description
 The idea is for every boid to traverse the "pack" and update its position according to three rules:
