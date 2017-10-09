@@ -14,4 +14,4 @@ By implementing all behaviour rules in single run, using method *swarm*, constan
 
 For further performance improvement, multithreading implementation is considered as **std::vector**'s read-thread-safety allows to split the pack on thread-groups.
 
-![Snapshot](https://user-images.githubusercontent.com/31808526/31057999-f86d24a0-a6f4-11e7-9277-62b95948a394.png)
+![Snapshot](https://user-images.githubusercontent.com/31808526/31323066-a153dcde-acaa-11e7-9bc8-fe8e33caf7be.png)
