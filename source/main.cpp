@@ -1,149 +1,143 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <cmath>
-#include "Vector2_ext.h"
-#include "Boid.h"
 #include <thread>
+#include <exception>
+#include <stdexcept>
+
+#include "BoidParameters.h"
+#include "Vector2_ext.h"
+#include "Settings.h"
+#include "Boid.h"
+#include "GUI.h"
 
 int main() {
-	int win_x_sz{ 0 };
-	int win_y_sz{ 0 };
-	int boidsNum{ 0 };
-	
-	// ---- simulation parameters ----
-	std::cout << "Enter x-size of the window:" << std::endl;
-	std::cin  >> win_x_sz;
-	std::cout << "Enter y-size of the window:" << std::endl;
-	std::cin  >> win_y_sz;
-	std::cout << "Enter number of boids:"      << std::endl;
-	std::cin  >> boidsNum;
+	try {
+		Settings settings;
+		GUI gui;
 
-	// ---- window + text design ---- 
-	sf::RenderWindow window(sf::VideoMode(win_x_sz, win_y_sz), "Autonomous Agents");
-	window.setFramerateLimit(100);
-	window.clear(sf::Color::White);
+		settings.init();
 
-	sf::Font settings_font;
-	if (!settings_font.loadFromFile("Inconsolata-Regular.ttf"))
-	{
-		std::cout << "Error: can't load fonts" << std::endl;
-	}
+		sf::RenderWindow window(sf::VideoMode(settings.getWinX(), settings.getWinY()), "Autonomous Agents");
+		window.setFramerateLimit(100);
+		window.clear(sf::Color::Black);
 
-	sf::Text fpsText;
-	fpsText.setFont(settings_font);
-	fpsText.setPosition(20,20);
-	fpsText.setCharacterSize(15);
-	fpsText.setFillColor(sf::Color::Red);
-	
-	sf::Text boidsNumText;
-	boidsNumText.setFont(settings_font);
-	boidsNumText.setPosition(20, 45);
-	boidsNumText.setCharacterSize(15);
-	boidsNumText.setFillColor(sf::Color::Red);
 
-	sf::Text parallelStatusText;
-	parallelStatusText.setFont(settings_font);
-	parallelStatusText.setPosition(20, 70);
-	parallelStatusText.setCharacterSize(15);
-	parallelStatusText.setFillColor(sf::Color::Red);
 
-	// ---- boids initialization ----
-	std::vector<Boid> v_veh;
-	std::vector<Boid*> v_ptr;
-	v_veh.reserve(boidsNum);
-	for (int i = 0; i < boidsNum; ++i) {
-		v_veh.push_back(Boid(window));
-		v_ptr.push_back(&v_veh[i]);
-	}
-
-	// ---- in-loop parameters ----
-	std::string fpsString;
-	std::string boidsNumString;
-	int sz = v_veh.size();
-	int cntrTime = 0;
-	
-	bool isParallel = false;
-	auto threadNum   = std::thread::hardware_concurrency() + 10;
-	auto thread_sz = sz / threadNum;
-
-	auto v_threads = std::vector<std::thread>(threadNum);
-	
-
-	const sf::Time OneSecond = sf::seconds(1);
-	sf::Clock clock;
-	
-	while (window.isOpen()) {
+		// ---- boids initialization ----
+		std::vector<Boid> v_veh;
+		std::vector<Boid*> v_ptr;
+		v_veh.reserve(settings.getBoidsNumber());
+		v_ptr.reserve(settings.getBoidsNumber());
 		
-		// input handling
-		sf::Event event;
-		while (window.pollEvent(event)) {
+		for (int i = 0; i < v_veh.capacity(); ++i) {
+			v_veh.push_back(Boid(window, settings));
+			v_ptr.push_back(&v_veh[i]);
+		}
 
-			if (event.type == sf::Event::MouseButtonPressed) {
-				v_veh.push_back(Boid(window));
-				++sz;
+		auto sz = v_veh.size();
+		
+		// ----- Parallel options -----
+		auto thread_sz = sz / settings.getThreadsNumber();
+		auto v_threads = std::vector<std::thread>(settings.getThreadsNumber());
+		bool isParallel = false;
+
+		// ----- Time options -----
+		const sf::Time OneSecond = sf::seconds(1);
+		sf::Clock clock;
+		int cntrTime = 0;
+		
+		
+		//	----- [SIMULATION LOOP] ------
+
+		while (window.isOpen()) {
+
+			// ---- input handling -----
+			sf::Event event;
+			while (window.pollEvent(event)) {
+
+				if (event.type == sf::Event::MouseButtonPressed) {
+					if (v_veh.size() == v_veh.capacity()) {
+						v_veh.push_back(Boid(window, settings));
+						v_ptr.clear();
+						v_ptr.reserve(2 * sz);
+						++sz;	// - increment implicitly in settings? Or reference? 
+					
+						for (int i = 0; i < sz; ++i) {
+							v_ptr.push_back(&v_veh[i]); 
+						}
+					}
+					else {
+						v_veh.push_back(Boid(window, settings));
+						++sz;
+						v_ptr.push_back(&v_veh[sz - 1]);
+					}
+					thread_sz = sz / settings.getThreadsNumber();
+				}
+
+
+				if (event.type == sf::Event::KeyPressed) {
+					if (event.key.code == sf::Keyboard::P) {
+						isParallel = !isParallel;
+					}
+				}
+
+				if (event.type == sf::Event::Closed)
+					window.close();
 			}
 
-			if (event.type == sf::Event::KeyPressed) {
-				if (event.key.code == sf::Keyboard::P) {
-					isParallel = !isParallel;
-					if (isParallel)
-						parallelStatusText.setString("multithreading: ON ");
-					else
-						parallelStatusText.setString("multithreading: OFF ");
+			window.clear(sf::Color::Black);
+
+			// ------ boids update -----
+			//      simple traverse  
+			if (!isParallel) {
+				for (int i = 0; i < sz; ++i) {
+					v_veh[i].swarm(v_veh);
+				}
+				for (int i = 0; i < sz; ++i) {
+					v_veh[i].update(window);
+					v_veh[i].draw(window, true);
 				}
 			}
+			else {
+			//      parallel traverse 
+				std::vector<Boid*>::iterator ptr = v_ptr.begin();
 
-			if (event.type == sf::Event::Closed)
-				window.close();
-		}
+				for (int i = 0; i < settings.getThreadsNumber() - 1; ++i) {
+					ptr = v_ptr.begin() + i*thread_sz;
+					v_threads.at(i) = std::thread(parallel_swarm, v_ptr, ptr, ptr + thread_sz);
+				}
+				// last thread will have to deal with what's left
+				v_threads.at(settings.getThreadsNumber() - 1) = std::thread(parallel_swarm, v_ptr, ptr, v_ptr.end());
+				for (int i = 0; i < settings.getThreadsNumber(); ++i)
+					v_threads.at(i).join();
 
-		// compute boids
-		window.clear(sf::Color::White);
-		if (isParallel) {
-			std::vector<Boid*>::iterator ptr = v_ptr.begin();
-
-			for (int i = 0; i < threadNum - 1; ++i) {
-				ptr = v_ptr.begin() + i*thread_sz;
-				v_threads.at(i) = std::thread(parallel_swarm, v_ptr, ptr, ptr + thread_sz);
+				for (int i = 0; i < sz; ++i) {
+					v_veh[i].update(window);
+					v_veh[i].draw(window, true);
+				}
 			}
-			// last thread will have to deal with what's left
-			v_threads.at(threadNum - 1) = std::thread(parallel_swarm, v_ptr, ptr, v_ptr.end());
-			for (int i = 0; i < threadNum; ++i)
-				v_threads.at(i).join();
-
-			for (int i = 0; i < sz; ++i) {
-				v_veh[i].update(window);
-				v_veh[i].draw(window);
+			
+			// gui update
+			if (clock.getElapsedTime().asSeconds() < OneSecond.asSeconds())
+				++cntrTime;
+			else {
+				gui.setFps(cntrTime);
+				cntrTime = 0;
+				clock.restart();
 			}
+			gui.setBoidsNumber(sz);
+			gui.setParallelStatus(isParallel);
+			gui.draw(window);
+			
+			//draw everything
+			window.display();
 		}
-		else {
-
-			for (int i = 0; i < sz; ++i)
-				v_veh[i].swarm(v_veh);
-			for (int i = 0; i < sz; ++i) {
-				v_veh[i].update(window);   // this way updates are happening with boids already knowing their next moves
-				v_veh[i].draw(window);
-			}
-		}
-		// fps + boidsNum counter + multithreading status
-		if (clock.getElapsedTime().asSeconds() < OneSecond.asSeconds())
-			++cntrTime;
-		else {
-			fpsString = "fps: " + std::to_string(cntrTime);
-			fpsText.setString(fpsString);
-			cntrTime = 0;
-			clock.restart();
-		}
-		boidsNumText.setString("boids: " + std::to_string(sz));
-		window.draw(fpsText);
-		window.draw(boidsNumText);
-
-		window.draw(parallelStatusText);
-		window.draw(boidsNumText);
-
-		//draw everything
-		window.display();
+		return 0;
+	}
+	catch (std::exception& e) {
+		std::cout << "noot-noot, error: " << e.what() << std::endl;
+		return 1;
 	}
 
-	return 0;
 }
