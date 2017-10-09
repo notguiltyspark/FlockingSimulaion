@@ -6,15 +6,15 @@
 
 class BoidParameters{
 public:
-	float maxSpeed = 2.8;
-	float maxForce = 0.09;
+	float maxSpeed;
+	float maxForce;
 
-	float desiredSeparation = 10; //constexpr or input?
-	float visionRadius      = 15;
+	float desiredSeparation;
+	float visionRadius;
 
-	float alignCoef    = 0.9;
-	float coheseCoef   = 0.4;
-	float separateCoef = 0.9;
+	float alignCoef;
+	float coheseCoef;
+	float separateCoef;
 
 	BoidParameters() {}
    ~BoidParameters() {}
